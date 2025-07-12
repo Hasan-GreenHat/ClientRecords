@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Client Share Records</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .table-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #1565c0;
+      color: white;
+    }
+
+    tfoot td {
+      font-weight: bold;
+      background-color: #e3f2fd;
+    }
+
+    input[type="text"], input[type="number"], input[type="date"] {
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .btn {
+      padding: 10px 15px;
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background: #0d47a1;
+    }
+
+    .btn-danger {
+      background: #e53935;
+    }
+
+    .btn-danger:hover {
+      background: #b71c1c;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Client Share Records</h1>
+
+  <div class="table-container">
+    <div class="form-row">
+      <input type="text" id="name" placeholder="Client Name" />
+      <input type="number" id="shares" placeholder="No. of Shares" />
+      <input type="number" id="price" placeholder="Price per Share (₹)" />
+      <input type="date" id="date" />
+      <input type="text" id="mobile" placeholder="Mobile Number" />
+      <button class="btn" onclick="addClient()">Add Client</button>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-danger" onclick="resetAll()">Reset All Data</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>No. of Shares</th>
+          <th>Price per Share (₹)</th>
+          <th>Amount Paid (₹)</th>
+          <th>Date</th>
+          <th>Mobile Number</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="clientTableBody"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">Total</td>
+          <td id="totalAmount">₹0.00</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'clientShares';
+
+    function loadClients() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const clients = JSON.parse(stored);
+        clients.forEach(client => insertRow(client));
+      }
+    }
+
+    function saveClients() {
+      const rows = document.querySelectorAll('#clientTableBody tr');
+      const clients = Array.from(rows).map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+          name: cells[0].textContent,
+          shares: cells[1].textContent,
+          price: cells[2].textContent,
+          amount: cells[3].textContent,
+          date: cells[4].textContent,
+          mobile: cells[5].textContent
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    }
+
+    function updateTotalAmount() {
+      const amounts = document.querySelectorAll('#clientTableBody td:nth-child(4)');
+      let total = 0;
+      amounts.forEach(cell => {
+        total += parseFloat(cell.textContent || 0);
+      });
+      document.getElementById('totalAmount').textContent = `₹${total.toFixed(2)}`;
+    }
+
+    function addClient() {
+      const name = document.getElementById('name').value.trim();
+      const shares = parseFloat(document.getElementById('shares').value);
+      const price = parseFloat(document.getElementById('price').value);
+      const date = document.getElementById('date').value;
+      const mobile = document.getElementById('mobile').value.trim();
+
+      if (!name || isNaN(shares) || isNaN(price) || !date || !mobile) {
+        alert("Please fill all fields correctly.");
+        return;
+      }
+
+      const amount = shares * price;
+      const client = { name, shares, price, amount, date, mobile };
+      insertRow(client);
+      saveClients();
+      updateTotalAmount();
+
+      document.getElementById('name').value = '';
+      document.getElementById('shares').value = '';
+      document.getElementById('price').value = '';
+      document.getElementById('date').value = '';
+      document.getElementById('mobile').value = '';
+    }
+
+    function insertRow(client) {
+      const table = document.getElementById('clientTableBody');
+      const row = table.insertRow();
+      row.innerHTML = `
+        <td>${client.name}</td>
+        <td>${client.shares}</td>
+        <td>${client.price}</td>
+        <td>${parseFloat(client.amount).toFixed(2)}</td>
+        <td>${client.date}</td>
+        <td>${client.mobile}</td>
+        <td><button class="btn btn-danger" onclick="removeRow(this)">Delete</button></td>
+      `;
+    }
+
+    function removeRow(btn) {
+      const row = btn.closest('tr');
+      row.remove();
+      saveClients();
+      updateTotalAmount();
+    }
+
+    function resetAll() {
+      if (confirm("Are you sure you want to reset all data?")) {
+        document.getElementById('clientTableBody').innerHTML = '';
+        localStorage.removeItem(STORAGE_KEY);
+        updateTotalAmount();
+      }
+    }
+
+    window.onload = () => {
+      loadClients();
+      updateTotalAmount();
+    };
+  </script>
+</body>
+</html>
